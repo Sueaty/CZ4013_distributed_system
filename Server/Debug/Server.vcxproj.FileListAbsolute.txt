@@ -1,0 +1,2 @@
+C:\Users\Cho Home\Desktop\Server\Debug\Server.exe
+C:\Users\Cho Home\Desktop\Server\Debug\Server.pdb

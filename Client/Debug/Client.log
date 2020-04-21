@@ -1,0 +1,4 @@
+﻿  client.cpp
+C:\Users\Cho Home\Desktop\Client\client.cpp(43,31): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+C:\Users\Cho Home\Desktop\Client\client.cpp(20,14): warning C4101: 'clientInfo' :참조되지 않은 지역 변수입니다.
+  Client.vcxproj -> C:\Users\Cho Home\Desktop\Client\Debug\Client.exe

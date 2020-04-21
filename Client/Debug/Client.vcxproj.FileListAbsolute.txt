@@ -1,0 +1,2 @@
+C:\Users\Cho Home\Desktop\Client\Debug\Client.exe
+C:\Users\Cho Home\Desktop\Client\Debug\Client.pdb
