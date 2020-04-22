@@ -21,6 +21,8 @@ SOCKADDR_IN serverInfo, clientInfo;
 int clientInfoSize = sizeof(clientInfo);
 std::string readFileAction(char*, int, int);
 void readWriteFileAction(std::string, int startPos, std::string);
+void monitor(int);
+int whitespaceCount(std::string);
 
 
 int main(void) {
@@ -107,11 +109,47 @@ int main(void) {
 			break;
 		}
 		case 3: {
-			//
+			char opt3[] = "Option 3. is selected";
+			std::cout << opt3 << std::endl;
+			sendMessage(opt3);
+
 			break;
 		}
 		case 4: {
-			//
+			char opt4[] = "Option 4. is selected";
+			std::cout << opt4 << std::endl;
+			sendMessage(opt4);
+
+			typedef struct fileInfo {
+				char filePath[200];
+				char requesterName[50];
+			} fileInfo;
+
+			fileInfo fi;
+
+			recvSize = recvfrom(socketS, (char*)&fi, sizeof(fi), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+			if (recvSize == -1) {
+				std::cout << "Failed to receive message" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketS);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Packet received" << std::endl;
+			std::cout << fi.filePath << std::endl;
+			std::cout << fi.requesterName << std::endl;
+
+			char recved[] = "File Info request received";
+			sendMessage(recved);
+
+			// Do the action
+			int whitespaceCnt = whitespaceCount(fi.filePath);
+			
+			std::string str = std::to_string(whitespaceCnt);
+			char* cstr = new char[str.length() + 1];
+			strcpy(cstr, str.c_str());
+			sendMessage(cstr);
+
 			break;
 		}
 		case 5: {
@@ -258,4 +296,27 @@ void readWriteFileAction(std::string path, int startPos, std::string content) {
 
 
 	fclose(inFile);
+}
+
+
+/*OPTION 3
+
+
+*/
+
+int whitespaceCount(std::string filePath) {
+	FILE* inFile;
+	errno_t err = fopen_s(&inFile, filePath.c_str(), "r");
+	if (err != 0) {
+		std::cout << "cannot open file" << std::endl;
+		exit(1);
+	}
+
+	int c, cnt = 0;
+	while ((c = fgetc(inFile)) != EOF) {
+		if ((char)c == ' ' || (char)c == '\t' || (char)c == '\n')
+			cnt++;
+	}
+	std::cout << cnt << std::endl;
+	return cnt;
 }
