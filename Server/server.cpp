@@ -14,15 +14,17 @@
 void openSocket(void);
 int sendMessage(char*);
 
+
 WSADATA wsaData; //structure that saves Windows's socket initialized info
 SOCKET socketS; // SOCKET handle
 // structure that contains elements that consist a socket
 SOCKADDR_IN serverInfo, clientInfo;
 int clientInfoSize = sizeof(clientInfo);
 std::string readFileAction(char*, int, int);
-void readWriteFileAction(std::string, int startPos, std::string);
+void readWriteFileAction(std::string, int, std::string);
 void monitor(int);
 int whitespaceCount(std::string);
+void appendFileAction(std::string, std::string);
 
 
 int main(void) {
@@ -153,7 +155,35 @@ int main(void) {
 			break;
 		}
 		case 5: {
-			//
+			char opt5[] = "Option 5. is selected";
+			std::cout << opt5 << std::endl;
+			sendMessage(opt5);
+
+			typedef struct fileAppend {
+				char filePath[200];
+				char appendName[50];
+			} fileAppend;
+
+			fileAppend fa;
+
+			recvSize = recvfrom(socketS, (char*)&fa, sizeof(fa), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+			if (recvSize == -1) {
+				std::cout << "Failed to receive message" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketS);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Packet received" << std::endl;
+			std::cout << fa.filePath << std::endl;
+			std::cout << fa.appendName << std::endl;
+
+			char recved[] = "File append request received";
+			sendMessage(recved);
+
+			// Do the action
+			appendFileAction(fa.filePath, fa.appendName);
+
 			break;
 		}
 		case 6: {
@@ -318,5 +348,27 @@ int whitespaceCount(std::string filePath) {
 			cnt++;
 	}
 	std::cout << cnt << std::endl;
+	fclose(inFile);
 	return cnt;
+}
+
+void appendFileAction(std::string filePath, std::string name) {
+	FILE* inFile;
+	errno_t err = fopen_s(&inFile, filePath.c_str(), "a+");
+	if (err != 0) {
+		std::cout << "cannot open file" << std::endl;
+		exit(1);
+	}
+	fputs(name.c_str(), inFile);
+
+	fseek(inFile, 0L, SEEK_END);
+	int fileSize = ftell(inFile) + name.length();
+	char* buffer = new char[fileSize];
+	memset(buffer, 0, fileSize);
+	rewind(inFile);
+	fread(buffer, fileSize, 1, inFile);
+	std::cout << buffer << std::endl;
+	int sendSize = sendto(socketS, buffer, strlen(buffer), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
+
+	fclose(inFile);
 }
