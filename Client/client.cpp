@@ -118,7 +118,6 @@ int main(void) {
 			std::cin.ignore();
 			std::cin.getline(fi.filePath, 200);
 			std::cout << "Input Requester's Name : ";
-			std::cin.ignore();
 			std::cin.getline(fi.requesterName, 50);
 
 			int sendSize = sendto(socketC, (char*)&fi, sizeof(fi), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
@@ -146,7 +145,29 @@ int main(void) {
 			break;
 		}
 		case 5: {
-			//
+			typedef struct fileAppend {
+				char filePath[200];
+				char appendName[50];
+			} fileAppend;
+
+			fileAppend fa;
+			std::cout << "Input File Path : ";
+			std::cin.ignore();
+			std::cin.getline(fa.filePath, 200);
+			std::cout << "Input Requester's Name : ";
+			std::cin.getline(fa.appendName, 50);
+
+			int sendSize = sendto(socketC, (char*)&fa, sizeof(fa), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+			if (sendSize != sizeof(fa)) {
+				std::cout << "Failed to send packet" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketC);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Succefully sent the packet" << std::endl;
+			recvString(); // "File append request received"
+			recvString(); // ??? Content
 			break;
 		}
 		default:
