@@ -24,11 +24,15 @@ int serverInfoSize = sizeof(serverInfo);
 
 int main(void) {
 	openSocket();
-	int choice = showOptions(); // let the user choose action
-	sendOption(choice); // send option information to server
-	recvString(); // receive message from the server : Option n. selected
 
-	while (choice != 6) {
+	while (true) {
+		int choice = showOptions(); // let the user choose action
+		sendOption(choice); // send option information to server
+		recvString(); // receive message from the server : Option n. selected
+		if (choice == 6)
+			break;
+
+
 		switch (choice) {
 		case 1: {
 			typedef struct readFile {
@@ -42,6 +46,10 @@ int main(void) {
 			std::cin.getline(rf.filePath, 200);
 			std::cout << "Input starting position(byte) : ";
 			std::cin >> rf.startByte;
+			/* Deal with error when statByte, numByteRead doesn't match fileSize*/
+	//
+	//
+	//
 			std::cout << "Input number of bytes to read : ";
 			std::cin >> rf.numByteToRead;
 
@@ -59,7 +67,36 @@ int main(void) {
 			break;
 		}
 		case 2: {
-			//
+			typedef struct readWriteFile {
+				char filePath[200];
+				int startByte;
+				char content[PACKET_SIZE];
+			}readWriteFile;
+			readWriteFile rwf;
+			std::cout << "Input File Path : ";
+			std::cin.ignore();
+			std::cin.getline(rwf.filePath, 200);
+			std::cout << "Input starting position(byte) : ";
+			std::cin >> rwf.startByte;
+			/* Deal with error when statByte, numByteRead doesn't match fileSize*/
+	//
+	//
+	//
+			std::cin.ignore();
+			std::cout << "Input content to write : ";
+			std::cin.getline(rwf.content, PACKET_SIZE);
+
+			int sendSize = sendto(socketC, (char*)&rwf, sizeof(rwf), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+			if (sendSize != sizeof(rwf)) {
+				std::cout << "Failed to send packet" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketC);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Succefully sent the packet" << std::endl;
+			recvString(); // "Read  Write File information recieved"
+			recvString(); // "Content"
 			break;
 		}
 		case 3: {
@@ -71,10 +108,6 @@ int main(void) {
 			break;
 		}
 		case 5: {
-			//
-			break;
-		}
-		case 6: {
 			//
 			break;
 		}
@@ -98,7 +131,7 @@ int main(void) {
 		std::cout << "Succefully sent the packet" << std::endl;
 		*/
 
-
+		/*
 		char Buffer[PACKET_SIZE] = {};
 		int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
 		if (recvSize == -1) {
@@ -109,17 +142,14 @@ int main(void) {
 			exit(0);
 		}
 		std::cout << "Packet received" << std::endl;
-		//std::cout << "SENDER : " << inet_ntoa(serverInfo.sin_addr) << std::endl;
 		std::cout << "DATA : " << Buffer << std::endl;
 		
-
-
-
 		closesocket(socketC);
 		WSACleanup();
-
-
+		*/
 	}
+	closesocket(socketC);
+	WSACleanup();
 	
 	return 0;
 }
