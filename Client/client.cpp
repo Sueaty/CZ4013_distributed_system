@@ -1,3 +1,4 @@
+
 #include "stdafx.h"
 //#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <iostream>
@@ -104,7 +105,44 @@ int main(void) {
 			break;
 		}
 		case 4: {
-			//
+			// Idempotent operation : result doesn't change
+			// Count whitespace : \n, \t, ' '
+
+			typedef struct fileInfo {
+				char filePath[200];
+				char requesterName[50];
+			} fileInfo;
+
+			fileInfo fi;
+			std::cout << "Input File Path : ";
+			std::cin.ignore();
+			std::cin.getline(fi.filePath, 200);
+			std::cout << "Input Requester's Name : ";
+			std::cin.ignore();
+			std::cin.getline(fi.requesterName, 50);
+
+			int sendSize = sendto(socketC, (char*)&fi, sizeof(fi), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+			if (sendSize != sizeof(fi)) {
+				std::cout << "Failed to send packet" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketC);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Succefully sent the packet" << std::endl;
+			recvString(); // "File info request received"
+			// receive number of whitespaces
+			char Buffer[PACKET_SIZE] = {};
+			int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
+			if (recvSize == -1) {
+				std::cout << "Failed to receive message" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketC);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Number of spaces : " << Buffer << std::endl;
+
 			break;
 		}
 		case 5: {
