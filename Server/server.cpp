@@ -20,6 +20,7 @@ SOCKET socketS; // SOCKET handle
 SOCKADDR_IN serverInfo, clientInfo;
 int clientInfoSize = sizeof(clientInfo);
 std::string readFileAction(char*, int, int);
+void readWriteFileAction(std::string, int startPos, std::string);
 
 
 int main(void) {
@@ -74,18 +75,49 @@ int main(void) {
 			int sendSize = sendto(socketS, buff, strlen(content.c_str()), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
 			break;
 		}
-		case 2:
+		case 2: {
+			char opt2[] = "Option 2. is selected";
+			std::cout << opt2 << std::endl;
+			sendMessage(opt2);
+
+			typedef struct readWriteFile {
+				char filePath[200];
+				int startByte;
+				char content[PACKET_SIZE];
+			}readWriteFile;
+			readWriteFile rwf;
+			recvSize = recvfrom(socketS, (char*)&rwf, sizeof(rwf), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+			if (recvSize == -1) {
+				std::cout << "Failed to receive message" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketS);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Packet received" << std::endl;
+			std::cout << rwf.filePath << std::endl;
+			std::cout << rwf.startByte << std::endl;
+			std::cout << rwf.content << std::endl;
+
+			char recved[] = "Read Write File information received";
+			sendMessage(recved);
+
+			// Do the action
+			readWriteFileAction(rwf.filePath, rwf.startByte, rwf.content);
+			break;
+		}
+		case 3: {
 			//
 			break;
-		case 3:
+		}
+		case 4: {
 			//
 			break;
-		case 4:
+		}
+		case 5: {
 			//
 			break;
-		case 5:
-			//
-			break;
+		}
 		case 6: {
 			std::cout << "End of Server-Client Program" << std::endl;
 			char msg6[] = "Terminate Server-Client Program";
@@ -181,7 +213,6 @@ int sendMessage(char* cMsg) {
 
 /* ========== ACTION ==========*/
 std::string readFileAction(char* filepath, int startByte, int numByteRead) {
-	std::cout << "Pos here" << std::endl;
 	FILE* inFile;
 	errno_t err = fopen_s(&inFile, filepath, "r");
 	/* if(err != 0) -> Deal with error when file cannot be opened*/
@@ -190,10 +221,7 @@ std::string readFileAction(char* filepath, int startByte, int numByteRead) {
 		std::cout << "Ending program" << std::endl;
 		exit(1);
 	}
-	//fseek(inFile, 0L, SEEK_END);
-	//int fileSize = ftell(inFile);
-	std::cout << "opened file" << std::endl;
-	/* Deal with error when statByte, numByteRead doesn't match fileSize*/
+
 	int c = 0;
 	std::string content;
 	for (int i = 0; i < startByte; i++)
@@ -204,4 +232,30 @@ std::string readFileAction(char* filepath, int startByte, int numByteRead) {
 	}
 	std::cout << content << std::endl;
 	return content;
+}
+
+void readWriteFileAction(std::string path, int startPos, std::string content) {
+
+	FILE* inFile;
+	errno_t err = fopen_s(&inFile, path.c_str(), "r+");
+	if (err != 0) {
+		std::cout << "cannot open file" << std::endl;
+		exit(1);
+	}
+	fseek(inFile, 0L, SEEK_END);
+	int fileSize = ftell(inFile) + content.length();
+	char* buffer = new char[fileSize];
+	memset(buffer, 0, fileSize);
+
+	fseek(inFile, startPos, SEEK_SET);
+	fwrite(content.c_str(), strlen(content.c_str()), 1, inFile);
+
+	rewind(inFile);
+	fread(buffer, fileSize, 1, inFile);
+
+
+	int sendSize = sendto(socketS, buffer, strlen(buffer), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
+
+
+	fclose(inFile);
 }
