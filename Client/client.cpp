@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 //#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <iostream>
@@ -13,65 +12,74 @@
 #define SERVER_IP "192.168.0.166"
 
 int showOptions(void);
+void sendOption(int);
+int recvString(void);
+void openSocket(void);
+
+WSADATA wsaData;
+SOCKET socketC;
+SOCKADDR_IN serverInfo;
+SOCKADDR_IN clientInfo;
+int serverInfoSize = sizeof(serverInfo);
 
 int main(void) {
-	int choice = showOptions();
+	openSocket();
+	int choice = showOptions(); // let the user choose action
+	sendOption(choice); // send option information to server
+	recvString(); // receive message from the server : Option n. selected
+
 	while (choice != 6) {
-		
-		WSADATA wsaData;
-		SOCKET socketC;
-		SOCKADDR_IN serverInfo;
-		SOCKADDR_IN clientInfo;
-
-
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData) == SOCKET_ERROR) {
-			std::cout << "Failed to Initialize WinSock" << std::endl;
-			std::cout << "Terminating program" << std::endl;
-			WSACleanup();
-			exit(0);
-		}
-		std::cout << "Successfully Initialized WinSock" << std::endl;
-
-		socketC = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-		if (socketC == INVALID_SOCKET) {
-			std::cout << "Failed to create a socket" << std::endl;
-			std::cout << "Terminating program" << std::endl;
-			closesocket(socketC);
-			WSACleanup();
-			exit(0);
-		}
-		std::cout << "Successfully created a server socket" << std::endl;
-
-		serverInfo.sin_family = AF_INET;
-		serverInfo.sin_port = htons(PORT);
-		serverInfo.sin_addr.s_addr = inet_addr(SERVER_IP);
-
 		switch (choice) {
-			case 1:
-				typedef struct readFile {
-					char filePath[200];
-					int startByte;
-					int numByteToRead;
-				}readFile;
-				readFile rf;
-				std::cout << "Input File Path : ";
-				std::cin.ignore();
-				std::cin.getline(rf.filePath, 200);
-				std::cout << "Input starting position(byte) : ";
-				std::cin >> rf.startByte;
-				std::cout << "Input number of bytes to read : ";
-				std::cin >> rf.numByteToRead;
+		case 1: {
+			typedef struct readFile {
+				char filePath[200];
+				int startByte;
+				int numByteToRead;
+			}readFile;
+			readFile rf;
+			std::cout << "Input File Path : ";
+			std::cin.ignore();
+			std::cin.getline(rf.filePath, 200);
+			std::cout << "Input starting position(byte) : ";
+			std::cin >> rf.startByte;
+			std::cout << "Input number of bytes to read : ";
+			std::cin >> rf.numByteToRead;
 
-				int sendSize = sendto(socketC, (char*)&rf, sizeof(rf), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
-				if (sendSize != sizeof(rf)) {
-					std::cout << "Failed to send packet" << std::endl;
-					std::cout << "Terminating program" << std::endl;
-					closesocket(socketC);
-					WSACleanup();
-					exit(0);
-				}
-				std::cout << "Succefully sent the packet" << std::endl;
-
+			int sendSize = sendto(socketC, (char*)&rf, sizeof(rf), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+			if (sendSize != sizeof(rf)) {
+				std::cout << "Failed to send packet" << std::endl;
+				std::cout << "Terminating program" << std::endl;
+				closesocket(socketC);
+				WSACleanup();
+				exit(0);
+			}
+			std::cout << "Succefully sent the packet" << std::endl;
+			recvString(); // "Read File information recieved"
+			recvString(); // "Content"
+			break;
+		}
+		case 2: {
+			//
+			break;
+		}
+		case 3: {
+			//
+			break;
+		}
+		case 4: {
+			//
+			break;
+		}
+		case 5: {
+			//
+			break;
+		}
+		case 6: {
+			//
+			break;
+		}
+		default:
+			continue;	
 		}
 
 		/*
@@ -88,8 +96,9 @@ int main(void) {
 			exit(0);
 		}
 		std::cout << "Succefully sent the packet" << std::endl;
+		*/
 
-		int serverInfoSize = sizeof(serverInfo);
+
 		char Buffer[PACKET_SIZE] = {};
 		int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
 		if (recvSize == -1) {
@@ -102,14 +111,14 @@ int main(void) {
 		std::cout << "Packet received" << std::endl;
 		//std::cout << "SENDER : " << inet_ntoa(serverInfo.sin_addr) << std::endl;
 		std::cout << "DATA : " << Buffer << std::endl;
-		*/
+		
 
 
 
 		closesocket(socketC);
 		WSACleanup();
 
-		choice = showOptions();
+
 	}
 	
 	return 0;
@@ -127,4 +136,53 @@ int showOptions(void) {
 	std::cout << "Enter Option : ";
 	std::cin >> userInput;
 	return userInput;
+}
+
+void sendOption(int choice) {
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
+	socketC = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	serverInfo.sin_family = AF_INET;
+	serverInfo.sin_port = htons(PORT);
+	serverInfo.sin_addr.s_addr = inet_addr(SERVER_IP);
+
+	int sendSize = sendto(socketC, (char*)&choice, sizeof(int), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+}
+
+void openSocket(void) {
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) == SOCKET_ERROR) {
+		std::cout << "Failed to Initialize WinSock" << std::endl;
+		std::cout << "Terminating program" << std::endl;
+		WSACleanup();
+		exit(0);
+	}
+	std::cout << "Successfully Initialized WinSock" << std::endl;
+
+	socketC = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (socketC == INVALID_SOCKET) {
+		std::cout << "Failed to create a socket" << std::endl;
+		std::cout << "Terminating program" << std::endl;
+		closesocket(socketC);
+		WSACleanup();
+		exit(0);
+	}
+	std::cout << "Successfully created a server socket" << std::endl;
+
+	serverInfo.sin_family = AF_INET;
+	serverInfo.sin_port = htons(PORT);
+	serverInfo.sin_addr.s_addr = inet_addr(SERVER_IP);
+}
+
+int recvString(void) {
+	char Buffer[PACKET_SIZE] = {};
+	int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
+	if (recvSize == -1) {
+		std::cout << "Failed to receive message" << std::endl;
+		std::cout << "Terminating program" << std::endl;
+		closesocket(socketC);
+		WSACleanup();
+		exit(0);
+	}
+	std::cout << "Packet received" << std::endl;
+	std::cout << "DATA : " << Buffer << std::endl;
+	return recvSize;
 }
