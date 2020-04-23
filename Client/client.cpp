@@ -41,20 +41,59 @@ int main(void) {
 				int numByteToRead;
 			}readFile;
 			readFile rf;
+
 			std::cout << "Input File Path : ";
 			std::cin.ignore();
 			std::cin.getline(rf.filePath, 200);
 			std::cout << "Input starting position(byte) : ";
 			std::cin >> rf.startByte;
-			/* Deal with error when statByte, numByteRead doesn't match fileSize*/
-	//
-	//
-	//
 			std::cout << "Input number of bytes to read : ";
 			std::cin >> rf.numByteToRead;
 
-			int sendSize = sendto(socketC, (char*)&rf, sizeof(rf), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
-			if (sendSize != sizeof(rf)) {
+
+			// Marshaling structure
+			// length of file path
+			int pathLen = strlen(rf.filePath);
+			std::string strPathLen = std::to_string(pathLen);
+			char pathLenByte[] = "0000";
+			int j = 3;
+			for (int i = strPathLen.length() - 1; i >= 0; i--)
+				pathLenByte[j--] = strPathLen[i];
+
+			// startByte -> 1234
+			std::string strStartByte = std::to_string(rf.startByte);
+			char startByteLen[] = "0000";
+			j = 3;
+			for (int i = strStartByte.length() - 1; i >= 0; i--)
+				startByteLen[j--] = strStartByte[i];
+			// numByteToRead -> 1234
+			std::string strReadByte = std::to_string(rf.numByteToRead);
+			char toReadLen[] = "0000";
+			j = 3;
+			for (int i = strReadByte.length() - 1; i >= 0; i--)
+				toReadLen[j--] = strReadByte[i];
+
+			// concat three information
+			int bufferSize = sizeof(pathLenByte) * 3 + pathLen;
+			char* buffer = new char[bufferSize];
+			memset(buffer, 0, bufferSize);
+			strcpy(buffer, pathLenByte);
+			strcat(buffer, rf.filePath);
+			strcat(buffer, startByteLen);
+			strcat(buffer, toReadLen);
+
+			// send buffer size first
+			// marshal bufferSize;
+			std::string strBufferSize = std::to_string(bufferSize);
+			char bufferSizeLen[] = "0000";
+			j = 3;
+			for (int i = strBufferSize.length() - 1; i >= 0; i--)
+				bufferSizeLen[j--] = strBufferSize[i];
+			int sendSize = sendto(socketC, bufferSizeLen, 4, 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+			
+			//send structure
+			sendSize = sendto(socketC, buffer, bufferSize, 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+			if (sendSize != bufferSize) {
 				std::cout << "client: Failed to send packet" << std::endl;
 				std::cout << "client: Terminating program" << std::endl;
 				closesocket(socketC);
@@ -166,7 +205,7 @@ int main(void) {
 			}
 			std::cout << "Succefully sent the packet" << std::endl;
 			recvString(); // "File append request received"
-			recvString(); // ??? Content
+			recvString(); // Content
 			break;
 		}
 		default:
@@ -235,10 +274,10 @@ int recvString(void) {
 	char Buffer[PACKET_SIZE] = {};
 	int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
 
+	// Unmarshal String
 	// Buffer : [0000][MSG]
 	int recMsgLen = 1000 * (Buffer[0] - '0') + 100 * (Buffer[1] - '0') + 10 * (Buffer[2] - '0') + Buffer[3] - '0';
 	char *recMsg = Buffer + 4;
-
 
 	if (recvSize == -1) {
 		std::cout << "client: Failed to receive message" << std::endl;
