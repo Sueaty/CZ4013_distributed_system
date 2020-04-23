@@ -19,7 +19,7 @@ SOCKET socketS; // SOCKET handle
 // structure that contains elements that consist a socket
 SOCKADDR_IN serverInfo, clientInfo;
 int clientInfoSize = sizeof(clientInfo);
-
+int invocation, option = 0;
 
 std::string readFileAction(char*, int, int);
 void readWriteFileAction(std::string, int, std::string);
@@ -33,10 +33,19 @@ int main(void) {
 	std::cout << "Server is now ON" << std::endl;
 
 	openSocket();
-	
-	int option = 0, recvSize;
 	while (true) {
 		//Unmarshal INT sent as user's choice
+		char invoc[4] = {};
+		int recvSize = recvfrom(socketS, (char*)invoc, sizeof(invoc), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+		invocation = invoc[3] - '0';
+		char msg1[] = "server : invocation method selected";
+		std::cout << msg1;
+		if (invocation == 1)
+			std::cout << " at-least-once" << std::endl;
+		else
+			std::cout << " at-most-once" << std::endl;
+		sendMessage((char*)msg1);
+
 		char cur[4] = {};
 		recvSize = recvfrom(socketS, (char*)cur, sizeof(cur), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
 		option = cur[3] - '0'; // char -> int
@@ -60,7 +69,7 @@ int main(void) {
 			closesocket(socketS);
 			WSACleanup();
 			break;
-		
+
 		}
 
 		switch (option) {
@@ -194,7 +203,7 @@ int main(void) {
 
 			// Do the action
 			int whitespaceCnt = whitespaceCount(fi.filePath);
-			
+
 			std::string str = std::to_string(whitespaceCnt);
 			char* cstr = new char[str.length() + 1];
 			strcpy(cstr, str.c_str());
