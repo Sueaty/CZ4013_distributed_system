@@ -1,6 +1,4 @@
-
 #include "stdafx.h"
-//#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <iostream>
 #include <stdio.h>
 #include <string>
@@ -30,9 +28,10 @@ int main(void) {
 		int choice = showOptions(); // let the user choose action
 		sendOption(choice); // send option information to server
 		recvString(); // receive message from the server : Option n. selected
-		if (choice == 6)
+		if (choice == 6) {
+			recvString();
 			break;
-
+		}
 
 		switch (choice) {
 		case 1: {
@@ -56,13 +55,13 @@ int main(void) {
 
 			int sendSize = sendto(socketC, (char*)&rf, sizeof(rf), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
 			if (sendSize != sizeof(rf)) {
-				std::cout << "Failed to send packet" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "client: Failed to send packet" << std::endl;
+				std::cout << "client: Terminating program" << std::endl;
 				closesocket(socketC);
 				WSACleanup();
 				exit(0);
 			}
-			std::cout << "Succefully sent the packet" << std::endl;
+			std::cout << "client: Succefully sent the packet" << std::endl;
 			recvString(); // "Read File information recieved"
 			recvString(); // "Content"
 			break;
@@ -89,13 +88,13 @@ int main(void) {
 
 			int sendSize = sendto(socketC, (char*)&rwf, sizeof(rwf), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
 			if (sendSize != sizeof(rwf)) {
-				std::cout << "Failed to send packet" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "client: Failed to send packet" << std::endl;
+				std::cout << "client: Terminating program" << std::endl;
 				closesocket(socketC);
 				WSACleanup();
 				exit(0);
 			}
-			std::cout << "Succefully sent the packet" << std::endl;
+			std::cout << "client: Succefully sent the packet" << std::endl;
 			recvString(); // "Read  Write File information recieved"
 			recvString(); // "Content"
 			break;
@@ -122,8 +121,8 @@ int main(void) {
 
 			int sendSize = sendto(socketC, (char*)&fi, sizeof(fi), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
 			if (sendSize != sizeof(fi)) {
-				std::cout << "Failed to send packet" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "client: Failed to send packet" << std::endl;
+				std::cout << "client: Terminating program" << std::endl;
 				closesocket(socketC);
 				WSACleanup();
 				exit(0);
@@ -134,8 +133,8 @@ int main(void) {
 			char Buffer[PACKET_SIZE] = {};
 			int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
 			if (recvSize == -1) {
-				std::cout << "Failed to receive message" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "client: Failed to receive message" << std::endl;
+				std::cout << "client: Terminating program" << std::endl;
 				closesocket(socketC);
 				WSACleanup();
 				exit(0);
@@ -159,8 +158,8 @@ int main(void) {
 
 			int sendSize = sendto(socketC, (char*)&fa, sizeof(fa), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
 			if (sendSize != sizeof(fa)) {
-				std::cout << "Failed to send packet" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "client: Failed to send packet" << std::endl;
+				std::cout << "client: Terminating program" << std::endl;
 				closesocket(socketC);
 				WSACleanup();
 				exit(0);
@@ -173,39 +172,6 @@ int main(void) {
 		default:
 			continue;	
 		}
-
-		/*
-
-
-		// packet send
-		char cMsg[] = "THIS IS CLIENT SENDING MESSAGE";
-		int sendSize = sendto(socketC, cMsg, strlen(cMsg), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
-		if (sendSize != strlen(cMsg)) {
-			std::cout << "Failed to send packet" << std::endl;
-			std::cout << "Terminating program" << std::endl;
-			closesocket(socketC);
-			WSACleanup();
-			exit(0);
-		}
-		std::cout << "Succefully sent the packet" << std::endl;
-		*/
-
-		/*
-		char Buffer[PACKET_SIZE] = {};
-		int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
-		if (recvSize == -1) {
-			std::cout << "Failed to receive message" << std::endl;
-			std::cout << "Terminating program" << std::endl;
-			closesocket(socketC);
-			WSACleanup();
-			exit(0);
-		}
-		std::cout << "Packet received" << std::endl;
-		std::cout << "DATA : " << Buffer << std::endl;
-		
-		closesocket(socketC);
-		WSACleanup();
-		*/
 	}
 	closesocket(socketC);
 	WSACleanup();
@@ -215,12 +181,14 @@ int main(void) {
 
 int showOptions(void) {
 	int userInput;
+	std::cout << "=========================" << std::endl;
 	std::cout << "1. Read File Content" << std::endl;
 	std::cout << "2. Insert File Content" << std::endl;
 	std::cout << "3. Monitor File Updates" << std::endl;
 	std::cout << "4. ide Content" << std::endl;
 	std::cout << "5. Non-ide Content" << std::endl;
 	std::cout << "6. Terminate Program" << std::endl;
+	std::cout << "=========================" << std::endl;
 
 	std::cout << "Enter Option : ";
 	std::cin >> userInput;
@@ -228,33 +196,35 @@ int showOptions(void) {
 }
 
 void sendOption(int choice) {
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	socketC = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	serverInfo.sin_family = AF_INET;
-	serverInfo.sin_port = htons(PORT);
-	serverInfo.sin_addr.s_addr = inet_addr(SERVER_IP);
+	// Marshal 'option' to byte array
+	// ex. if option = 3) cur = 0003
+	char cur[4] = {0, };
+	std::string strNum = std::to_string(choice);
+	for (int i = 0; i < 3; i++)
+		cur[i] = '0';
+	cur[3] = strNum[0];
 
-	int sendSize = sendto(socketC, (char*)&choice, sizeof(int), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
+	int sendSize = sendto(socketC, (char*)cur, sizeof(cur), 0, (struct sockaddr*) & serverInfo, sizeof(serverInfo));
 }
 
 void openSocket(void) {
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) == SOCKET_ERROR) {
-		std::cout << "Failed to Initialize WinSock" << std::endl;
-		std::cout << "Terminating program" << std::endl;
+		std::cout << "client: Failed to Initialize WinSock" << std::endl;
+		std::cout << "client: Terminating program" << std::endl;
 		WSACleanup();
 		exit(0);
 	}
-	std::cout << "Successfully Initialized WinSock" << std::endl;
+	std::cout << "client: Successfully Initialized WinSock" << std::endl;
 
 	socketC = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (socketC == INVALID_SOCKET) {
-		std::cout << "Failed to create a socket" << std::endl;
-		std::cout << "Terminating program" << std::endl;
+		std::cout << "client: Failed to create a socket" << std::endl;
+		std::cout << "client: Terminating program" << std::endl;
 		closesocket(socketC);
 		WSACleanup();
 		exit(0);
 	}
-	std::cout << "Successfully created a server socket" << std::endl;
+	std::cout << "client: Successfully created a server socket" << std::endl;
 
 	serverInfo.sin_family = AF_INET;
 	serverInfo.sin_port = htons(PORT);
@@ -264,14 +234,24 @@ void openSocket(void) {
 int recvString(void) {
 	char Buffer[PACKET_SIZE] = {};
 	int recvSize = recvfrom(socketC, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & serverInfo, &serverInfoSize);
+
+	// Buffer : [0000][MSG]
+	int recMsgLen = 1000 * (Buffer[0] - '0') + 100 * (Buffer[1] - '0') + 10 * (Buffer[2] - '0') + Buffer[3] - '0';
+	char *recMsg = Buffer + 4;
+
+
 	if (recvSize == -1) {
-		std::cout << "Failed to receive message" << std::endl;
-		std::cout << "Terminating program" << std::endl;
+		std::cout << "client: Failed to receive message" << std::endl;
+		std::cout << "client: Terminating program" << std::endl;
 		closesocket(socketC);
 		WSACleanup();
 		exit(0);
 	}
-	std::cout << "Packet received" << std::endl;
-	std::cout << "DATA : " << Buffer << std::endl;
+	std::cout << "client: Packet received" << std::endl;
+	std::cout << std::endl;
+	std::cout << "----------------------------\n"
+			  << "[Message Length] " << recMsgLen << "\n"
+			  << "[DATA] " << recMsg << "\n"
+			  << "----------------------------\n" << std::endl;
 	return recvSize;
 }
