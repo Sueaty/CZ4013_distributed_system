@@ -1,5 +1,4 @@
 #include "stdafx.h"
-//#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <iostream>
 #include <stdio.h>
 #include <cstdio>
@@ -20,6 +19,8 @@ SOCKET socketS; // SOCKET handle
 // structure that contains elements that consist a socket
 SOCKADDR_IN serverInfo, clientInfo;
 int clientInfoSize = sizeof(clientInfo);
+
+
 std::string readFileAction(char*, int, int);
 void readWriteFileAction(std::string, int, std::string);
 void monitor(int);
@@ -32,24 +33,40 @@ int main(void) {
 
 	openSocket();
 	
-
-	int option, recvSize;
+	int option = 0, recvSize;
 	while (true) {
-		recvSize = recvfrom(socketS, (char*)&option, sizeof(int), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+		//Unmarshal INT sent as user's choice
+		char cur[4] = {};
+		recvSize = recvfrom(socketS, (char*)cur, sizeof(cur), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+		option = cur[3] - '0'; // char -> int
+
 		if (recvSize == -1) {
-			std::cout << "Failed to recieve message" << std::endl;
-			std::cout << "terminating program" << std::endl;
+			std::cout << "server: Failed to recieve message" << std::endl;
+			std::cout << "server: terminating program" << std::endl;
 			closesocket(socketS);
 			WSACleanup();
 			exit(0);
 		}
-		std::cout << "Packet recieved" << std::endl;
+		std::cout << "server: Packet recieved" << std::endl;
+
+		if (option == 6) {
+			char opt6[] = "server : selected option is SIX";
+			std::cout << opt6 << std::endl;
+			sendMessage((char*)opt6);
+
+			char msg6[] = "server: Terminate Server-Client Program";
+			sendMessage(msg6);
+			closesocket(socketS);
+			WSACleanup();
+			break;
+		
+		}
 
 		switch (option) {
 		case 1: {
-			char opt1[] = "Option 1. is selected";
+			char opt1[] = "server : selected option is ONE";
 			std::cout << opt1 << std::endl;
-			sendMessage(opt1);
+			sendMessage((char*)opt1);
 
 			typedef struct readFile {
 				char filePath[200];
@@ -70,19 +87,23 @@ int main(void) {
 			std::cout << rf.startByte << std::endl;
 			std::cout << rf.numByteToRead << std::endl;
 			
-			char recved[] = "Read File information received";
+			char recved[] = "server: Read File information received";
 			sendMessage(recved);
 
 			// Do the action
 			std::string content = readFileAction(rf.filePath, rf.startByte, rf.numByteToRead);
-			const char* buff = content.c_str();
-			int sendSize = sendto(socketS, buff, strlen(content.c_str()), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
+			//const char* buff = content.c_str();
+			//int sendSize = sendto(socketS, buff, strlen(content.c_str()), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
+			char* buffer = new char[content.length() + 1];
+			strcpy(buffer, content.c_str());
+			sendMessage(buffer);
+			delete[] buffer;
 			break;
 		}
 		case 2: {
-			char opt2[] = "Option 2. is selected";
+			char opt2[] = "server : selected option is TWO";
 			std::cout << opt2 << std::endl;
-			sendMessage(opt2);
+			sendMessage((char*)opt2);
 
 			typedef struct readWriteFile {
 				char filePath[200];
@@ -92,8 +113,8 @@ int main(void) {
 			readWriteFile rwf;
 			recvSize = recvfrom(socketS, (char*)&rwf, sizeof(rwf), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
 			if (recvSize == -1) {
-				std::cout << "Failed to receive message" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "server: Failed to receive message" << std::endl;
+				std::cout << "server: Terminating program" << std::endl;
 				closesocket(socketS);
 				WSACleanup();
 				exit(0);
@@ -103,7 +124,7 @@ int main(void) {
 			std::cout << rwf.startByte << std::endl;
 			std::cout << rwf.content << std::endl;
 
-			char recved[] = "Read Write File information received";
+			char recved[] = "server: Read Write File information received";
 			sendMessage(recved);
 
 			// Do the action
@@ -111,16 +132,16 @@ int main(void) {
 			break;
 		}
 		case 3: {
-			char opt3[] = "Option 3. is selected";
+			char opt3[] = "server : selected option is THREE";
 			std::cout << opt3 << std::endl;
-			sendMessage(opt3);
+			sendMessage((char*)opt3);
 
 			break;
 		}
 		case 4: {
-			char opt4[] = "Option 4. is selected";
+			char opt4[] = "server : selected option is FOUR";
 			std::cout << opt4 << std::endl;
-			sendMessage(opt4);
+			sendMessage((char*)opt4);
 
 			typedef struct fileInfo {
 				char filePath[200];
@@ -155,9 +176,9 @@ int main(void) {
 			break;
 		}
 		case 5: {
-			char opt5[] = "Option 5. is selected";
+			char opt5[] = "server : selected option is FIVE";
 			std::cout << opt5 << std::endl;
-			sendMessage(opt5);
+			sendMessage((char*)opt5);
 
 			typedef struct fileAppend {
 				char filePath[200];
@@ -168,17 +189,17 @@ int main(void) {
 
 			recvSize = recvfrom(socketS, (char*)&fa, sizeof(fa), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
 			if (recvSize == -1) {
-				std::cout << "Failed to receive message" << std::endl;
-				std::cout << "Terminating program" << std::endl;
+				std::cout << "server: Failed to receive message" << std::endl;
+				std::cout << "server: Terminating program" << std::endl;
 				closesocket(socketS);
 				WSACleanup();
 				exit(0);
 			}
-			std::cout << "Packet received" << std::endl;
+			std::cout << "server: Packet received" << std::endl;
 			std::cout << fa.filePath << std::endl;
 			std::cout << fa.appendName << std::endl;
 
-			char recved[] = "File append request received";
+			char recved[] = "server: File append request received";
 			sendMessage(recved);
 
 			// Do the action
@@ -186,50 +207,12 @@ int main(void) {
 
 			break;
 		}
-		case 6: {
-			std::cout << "End of Server-Client Program" << std::endl;
-			char msg6[] = "Terminate Server-Client Program";
-			sendMessage(msg6);
-			closesocket(socketS);
-			WSACleanup();
-			break;
-		}
 		default: {
-			std::cout << "Invalid option input" << std::endl;
-			char msgD[] = "Invalid option number received";
-			sendMessage(msgD);
+			char msgD[] = "server : Invalid option input";
+			std::cout << msgD << std::endl;
+			sendMessage((char*)msgD);
 		}
 		}
-
-
-		/*
-		char Buffer[PACKET_SIZE] = {};
-		int recvSize = recvfrom(socketS, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
-		if (recvSize == -1) {
-			std::cout << "Failed to receive message" << std::endl;
-			std::cout << "Terminating program" << std::endl;
-			closesocket(socketS);
-			WSACleanup();
-			exit(0);
-		}
-		std::cout << "Packet received" << std::endl;
-		//std::cout << "SENDER : " << inet_ntoa(clientInfo.sin_addr) << std::endl;
-		std::cout << "DATA : " << Buffer << std::endl;
-		*/
-
-		/*
-		char cMsg[] = "Option Received";
-		int sendSize = sendto(socketS, cMsg, strlen(cMsg), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
-		
-		if (sendSize != recvSize) {
-			std::cout << "Failed to send message correctly" << std::endl;
-			std::cout << "Terminating program" << std::endl;
-			closesocket(socketS);
-			WSACleanup();
-			exit(0);
-		}
-		std::cout << "Successfully sent message" << std::endl;
-		*/
 	}
 }
 
@@ -238,24 +221,24 @@ void openSocket(void) {
 	//				using socket 2.2 version
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) == SOCKET_ERROR) {
 		// Error case : when it fails to start up
-		std::cout << "Failed to Initialize WinSock" << std::endl;
-		std::cout << "Terminating program" << std::endl;
+		std::cout << "server: Failed to Initialize WinSock" << std::endl;
+		std::cout << "server: Terminating program" << std::endl;
 		WSACleanup();
 		exit(0);
 	}
-	std::cout << "Successfully Initialized WinSock" << std::endl;
+	std::cout << "server: Successfully Initialized WinSock" << std::endl;
 
 	// Successful in initializing WinSock
 	socketS = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (socketS == INVALID_SOCKET) {
 		// Error case : when it fails to create socket
-		std::cout << "Failed to create a socket" << std::endl;
-		std::cout << "Terminating program" << std::endl;
+		std::cout << "server: Failed to create a socket" << std::endl;
+		std::cout << "server: Terminating program" << std::endl;
 		closesocket(socketS);
 		WSACleanup();
 		exit(0);
 	}
-	std::cout << "Successfully created a server socket" << std::endl;
+	std::cout << "server: Successfully created a server socket" << std::endl;
 
 	serverInfo.sin_family = AF_INET;
 	serverInfo.sin_port = htons(PORT);
@@ -265,17 +248,35 @@ void openSocket(void) {
 	int bindSocket = bind(socketS, (SOCKADDR*)&serverInfo, sizeof(serverInfo));
 	if (bindSocket == SOCKET_ERROR) {
 		// Error case : when it fails to bind socket with address
-		std::cout << "Failed to bind address information to socket" << std::endl;
-		std::cout << "Terminating program" << std::endl;
+		std::cout << "server: Failed to bind address information to socket" << std::endl;
+		std::cout << "server: Terminating program" << std::endl;
 		closesocket(socketS);
 		WSACleanup();
 		exit(0);
 	}
-	std::cout << "Successfully Binded" << std::endl;
+	std::cout << "server: Successfully Binded" << std::endl;
 }
 
 int sendMessage(char* cMsg) {
-	int sendSize = sendto(socketS, cMsg, strlen(cMsg), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
+	// char*buffer's format : [4byte : length info][cMsg];
+	int msgLen = strlen(cMsg);
+	std::string strMsgLen = std::to_string(msgLen);
+
+	char msgLenByte[] = "0000";
+
+	int j = 3;
+	for (int i = strMsgLen.length() - 1; i >= 0; i--) {
+		msgLenByte[j--] = strMsgLen[i];
+	}
+
+	int bufferSize = sizeof(msgLenByte) + msgLen;
+	char* buffer = new char[bufferSize];
+	memset(buffer, 0, sizeof(msgLenByte) + msgLen);
+	strcpy(buffer, msgLenByte);
+	strcat(buffer, cMsg);
+
+	int sendSize = sendto(socketS, buffer, bufferSize, 0, (struct sockaddr*) & clientInfo, clientInfoSize);
+
 	return sendSize;
 }
 
@@ -285,8 +286,8 @@ std::string readFileAction(char* filepath, int startByte, int numByteRead) {
 	errno_t err = fopen_s(&inFile, filepath, "r");
 	/* if(err != 0) -> Deal with error when file cannot be opened*/
 	if (err != 0) {
-		std::cout << "Cannot open file" << std::endl;
-		std::cout << "Ending program" << std::endl;
+		std::cout << "server: Cannot open file" << std::endl;
+		std::cout << "server: Ending program" << std::endl;
 		exit(1);
 	}
 
@@ -307,7 +308,7 @@ void readWriteFileAction(std::string path, int startPos, std::string content) {
 	FILE* inFile;
 	errno_t err = fopen_s(&inFile, path.c_str(), "r+");
 	if (err != 0) {
-		std::cout << "cannot open file" << std::endl;
+		std::cout << "server: cannot open file" << std::endl;
 		exit(1);
 	}
 	fseek(inFile, 0L, SEEK_END);
@@ -321,10 +322,7 @@ void readWriteFileAction(std::string path, int startPos, std::string content) {
 	rewind(inFile);
 	fread(buffer, fileSize, 1, inFile);
 
-
-	int sendSize = sendto(socketS, buffer, strlen(buffer), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
-
-
+	sendMessage(buffer);
 	fclose(inFile);
 }
 
@@ -338,7 +336,7 @@ int whitespaceCount(std::string filePath) {
 	FILE* inFile;
 	errno_t err = fopen_s(&inFile, filePath.c_str(), "r");
 	if (err != 0) {
-		std::cout << "cannot open file" << std::endl;
+		std::cout << "server: cannot open file" << std::endl;
 		exit(1);
 	}
 
@@ -356,7 +354,7 @@ void appendFileAction(std::string filePath, std::string name) {
 	FILE* inFile;
 	errno_t err = fopen_s(&inFile, filePath.c_str(), "a+");
 	if (err != 0) {
-		std::cout << "cannot open file" << std::endl;
+		std::cout << "server: cannot open file" << std::endl;
 		exit(1);
 	}
 	fputs(name.c_str(), inFile);
