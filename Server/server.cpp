@@ -26,6 +26,7 @@ void readWriteFileAction(std::string, int, std::string);
 void monitor(int);
 int whitespaceCount(std::string);
 void appendFileAction(std::string, std::string);
+int getFileSize(char*);
 
 
 int main(void) {
@@ -74,7 +75,15 @@ int main(void) {
 				int numByteToRead;
 			}readFile;
 			readFile rf;
-			recvSize = recvfrom(socketS, (char*)&rf, sizeof(rf), 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+
+			// receive 'to-be-send' size of struct first
+			int structSize;
+			char Buffer[PACKET_SIZE] = {};
+			int recvSize = recvfrom(socketS, Buffer, PACKET_SIZE, 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
+			structSize = 1000 * (Buffer[0] - '0') + 100 * (Buffer[1] - '0') + 10 * (Buffer[2] - '0') + Buffer[3] - '0';
+
+			char* structBuffer = new char[structSize];
+			recvSize = recvfrom(socketS, structBuffer, structSize, 0, (struct sockaddr*) & clientInfo, &clientInfoSize);
 			if (recvSize == -1) {
 				std::cout << "Failed to receive message" << std::endl;
 				std::cout << "Terminating program" << std::endl;
@@ -82,23 +91,37 @@ int main(void) {
 				WSACleanup();
 				exit(0);
 			}
-			std::cout << "Packet received" << std::endl;
-			std::cout << rf.filePath << std::endl;
-			std::cout << rf.startByte << std::endl;
-			std::cout << rf.numByteToRead << std::endl;
-			
+			std::cout << "server : Packet received" << std::endl;
+
+			int pathLen = 1000 * (structBuffer[0] - '0') + 100 * (structBuffer[1] - '0') + 10 * (structBuffer[2] - '0') + structBuffer[3] - '0';
+
+			std::string strBuffer(structBuffer);
+			std::string strFilePath = strBuffer.substr(4, pathLen);
+			std::string strStartByte = strBuffer.substr(4 + pathLen, 4);
+			std::string strReadByte = strBuffer.substr(4 + pathLen + 4
+				, 4);
+
+			// save to elements in structure rf
+			strcpy(rf.filePath, strFilePath.c_str());
+			rf.startByte = std::stoi(strStartByte);
+			rf.numByteToRead = std::stoi(strReadByte);
+
 			char recved[] = "server: Read File information received";
 			sendMessage(recved);
-
 			// Do the action
-			std::string content = readFileAction(rf.filePath, rf.startByte, rf.numByteToRead);
-			//const char* buff = content.c_str();
-			//int sendSize = sendto(socketS, buff, strlen(content.c_str()), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
-			char* buffer = new char[content.length() + 1];
-			strcpy(buffer, content.c_str());
-			sendMessage(buffer);
-			delete[] buffer;
-			break;
+			if (rf.startByte > getFileSize(rf.filePath)) {
+				char errMsg[] = "Start Byte must be smaller than given file size";
+				sendMessage(errMsg);
+				break;
+			}
+			else {
+				std::string content = readFileAction(rf.filePath, rf.startByte, rf.numByteToRead);
+				char* buffer = new char[content.length() + 1];
+				strcpy(buffer, content.c_str());
+				sendMessage(buffer);
+				delete[] buffer;
+				break;
+			}
 		}
 		case 2: {
 			char opt2[] = "server : selected option is TWO";
@@ -119,17 +142,21 @@ int main(void) {
 				WSACleanup();
 				exit(0);
 			}
-			std::cout << "Packet received" << std::endl;
-			std::cout << rwf.filePath << std::endl;
-			std::cout << rwf.startByte << std::endl;
-			std::cout << rwf.content << std::endl;
+			std::cout << "server: Packet received" << std::endl;
 
 			char recved[] = "server: Read Write File information received";
 			sendMessage(recved);
 
 			// Do the action
-			readWriteFileAction(rwf.filePath, rwf.startByte, rwf.content);
-			break;
+			if (rwf.startByte > getFileSize(rwf.filePath)) {
+				char errMsg[] = "Start Byte must be smaller than given file size";
+				sendMessage(errMsg);
+				break;
+			}
+			else {
+				readWriteFileAction(rwf.filePath, rwf.startByte, rwf.content);
+				break;
+			}
 		}
 		case 3: {
 			char opt3[] = "server : selected option is THREE";
@@ -271,7 +298,7 @@ int sendMessage(char* cMsg) {
 
 	int bufferSize = sizeof(msgLenByte) + msgLen;
 	char* buffer = new char[bufferSize];
-	memset(buffer, 0, sizeof(msgLenByte) + msgLen);
+	memset(buffer, 0, bufferSize);
 	strcpy(buffer, msgLenByte);
 	strcat(buffer, cMsg);
 
@@ -361,12 +388,21 @@ void appendFileAction(std::string filePath, std::string name) {
 
 	fseek(inFile, 0L, SEEK_END);
 	int fileSize = ftell(inFile) + name.length();
+
 	char* buffer = new char[fileSize];
 	memset(buffer, 0, fileSize);
-	rewind(inFile);
+	//rewind(inFile);
 	fread(buffer, fileSize, 1, inFile);
 	std::cout << buffer << std::endl;
 	int sendSize = sendto(socketS, buffer, strlen(buffer), 0, (struct sockaddr*) & clientInfo, clientInfoSize);
 
 	fclose(inFile);
+}
+
+int getFileSize(char* filePath) {
+	FILE* inFile;
+	fopen_s(&inFile, filePath, "r");
+	fseek(inFile, 0L, SEEK_END);
+	int fileSize = ftell(inFile);
+	return fileSize;
 }
